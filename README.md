@@ -13,5 +13,7 @@ pip3 install ipywidgets
 ```
 4. Enable Widget Javascript:
 ```
-jupyter nbextension enable --py --sys-prefix widgetsnbextension
+curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+sudo apt-get install -y nodejs
+jupyter labextension install @jupyter-widgets/jupyterlab-manager
 ```
