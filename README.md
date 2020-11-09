@@ -11,9 +11,18 @@ pip3 install jupyterlab
 ```
 pip3 install ipywidgets
 ```
-4. Enable Widget Javascript:
-```
-curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
-sudo apt-get install -y nodejs
-jupyter labextension install @jupyter-widgets/jupyterlab-manager
-```
+4. Install Widget Javascript:
+    - On Windows with `apt-get`:
+    ```
+    curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+    ```
+
+    - On Mac with Homebrew:
+    ```
+    brew install nodejs
+    ```
+5. Enable Widget Javascript in Jupyter:
+    ```    
+    jupyter labextension install @jupyter-widgets/jupyterlab-manager
+    ```
