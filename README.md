@@ -11,7 +11,7 @@ pip3 install jupyterlab
 ```
 pip3 install ipywidgets
 ```
-4. Install Widget Javascript:
+4. Install NodeJS (>= v10.0.0) for activating Widget Javascript:
     - On Ubuntu with `apt-get`:
     ```
     curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
