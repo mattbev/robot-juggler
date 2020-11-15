@@ -16,6 +16,10 @@ from pydrake.all import (
     Parser, PiecewisePolynomial, PiecewiseQuaternionSlerp, Quaternion, RigidTransform, 
     RollPitchYaw, RotationMatrix, SceneGraph, Simulator, TrajectorySource
 )
+from dynamics import (
+    SimpleContinuousTimeSystem, SimpleDiscreteTimeSystem, PseudoInverseController
+)
+
 
 class Juggler():
     def __init__(self):
@@ -58,6 +62,9 @@ class Juggler():
         builder.Connect(iiwa_controller.get_output_port_control(),
                         plant.get_actuation_input_port())
 
+        # create system
+        # self.system = builder.AddSystem(SimpleDiscreteTimeSystem())
+
         self.diagram = builder.Build()
 
         self.context = self.diagram.CreateDefaultContext()
@@ -68,6 +75,8 @@ class Juggler():
         plant.SetPositions(plant_context, q0)
         iiwa_controller.GetInputPort('desired_state').FixValue(
             iiwa_controller.GetMyMutableContextFromRoot(self.context), x0)
+
+
 
     def simulate(self, duration=5.0):
         """
