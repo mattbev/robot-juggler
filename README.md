@@ -1,4 +1,5 @@
-# robot-juggler
+# robot-jugg
+ler
 Robotic juggling. 
 
 ## Setup
@@ -25,4 +26,8 @@ pip3 install ipywidgets
 5. Enable Widget Javascript in Jupyter:
     ```    
     jupyter labextension install @jupyter-widgets/jupyterlab-manager
+    ```
+6. Install `manipulation` package (outside this repo), and follow the local setup steps for manipulation (already did Drake!) in `drake.html`:
+    ```
+    git clone --recursive git@github.com:RussTedrake/manipulation.git
     ```
