@@ -120,9 +120,9 @@ station.Finalize()
 # temp_context = station.CreateDefaultContext()
 # temp_plant_context = plant.GetMyContextFromRoot(temp_context)
 
-X_Paddle = {"initial": RigidTransform(RotationMatrix.MakeXRotation(-np.pi/2.0), [-0.25, 0, 1]), 
-            "intermediate": RigidTransform(RotationMatrix.MakeXRotation(-np.pi/2.0), [-1, 0, 1]),
-            "final": RigidTransform(RotationMatrix.MakeXRotation(-np.pi/2.0), [-1.75, 0, 1])}
+X_Paddle = {"initial": RigidTransform(RotationMatrix.MakeXRotation(-np.pi/2.0), [0, 0, 1]), 
+            "intermediate": RigidTransform(RotationMatrix.MakeXRotation(-np.pi/2.0), [-0.5, 0, 1]),
+            "final": RigidTransform(RotationMatrix.MakeXRotation(-np.pi/2.0), [-1, 0, 1])}
 
 times = {"initial": 0, "intermediate": 3, "final": 6}
 
