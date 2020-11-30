@@ -1,5 +1,4 @@
-# robot-jugg
-ler
+# robot-juggler
 Robotic juggling. 
 
 ## Setup
