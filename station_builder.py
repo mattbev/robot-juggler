@@ -31,16 +31,20 @@ from trajectories import (
 from manipulation.scenarios import AddIiwa, AddWsg, AddRgbdSensors
 from manipulation.utils import FindResource
 
-def MakeManipulationStation(time_step=0.002):
+def make_manipulation_station(time_step=0.002):
     builder = DiagramBuilder()
 
     # Add (only) the iiwa, WSG, and cameras to the scene.
     plant, scene_graph = AddMultibodyPlantSceneGraph(
         builder, time_step=time_step)
     iiwa = AddIiwa(plant)
-    wsg = AddWsg(plant, iiwa)
-    Parser(plant).AddModelFromFile(
+    # wsg = AddWsg(plant, iiwa)
+    parser = Parser(plant, scene_graph)
+    parser.AddModelFromFile(
         FindResource("models/camera_box.sdf"), "camera0")
+    parser.AddModelFromFile("paddle.sdf")
+        
+    plant.WeldFrames(plant.GetFrameByName("iiwa_link_7"), plant.GetFrameByName("base_link"))
     plant.Finalize()
 
     num_iiwa_positions = plant.num_positions(iiwa)
@@ -62,7 +66,6 @@ def MakeManipulationStation(time_step=0.002):
     # TODO: I should *NOT* need to add this system to the diagram, but I was having "keep-alive" issues.  Must fix.
     controller_plant = builder.AddSystem(MultibodyPlant(time_step=time_step))
     controller_iiwa = AddIiwa(controller_plant)
-    AddWsg(controller_plant, controller_iiwa, welded=True)
     controller_plant.Finalize()
 
     # Add the iiwa controller
@@ -101,20 +104,6 @@ def MakeManipulationStation(time_step=0.002):
     #builder.ExportOutput(adder.get_output_port(), "iiwa_torque_commanded")
     #builder.ExportOutput(adder.get_output_port(), "iiwa_torque_measured")
 
-    # Wsg controller.
-    wsg_controller = builder.AddSystem(SchunkWsgPositionController())
-    wsg_controller.set_name("wsg_controller")
-    builder.Connect(wsg_controller.get_generalized_force_output_port(),             
-                    plant.get_actuation_input_port(wsg))
-    builder.Connect(plant.get_state_output_port(wsg), wsg_controller.get_state_input_port())
-    builder.ExportInput(wsg_controller.get_desired_position_input_port(), "wsg_position")
-    builder.ExportInput(wsg_controller.get_force_limit_input_port(), "wsg_force_limit")
-    wsg_mbp_state_to_wsg_state = builder.AddSystem(
-        MakeMultibodyStateToWsgStateSystem())
-    builder.Connect(plant.get_state_output_port(wsg), wsg_mbp_state_to_wsg_state.get_input_port())
-    builder.ExportOutput(wsg_mbp_state_to_wsg_state.get_output_port(), "wsg_state_measured")
-    builder.ExportOutput(wsg_controller.get_grip_force_output_port(), "wsg_force_measured")
-
     # Cameras.
     AddRgbdSensors(builder, plant, scene_graph)
 
@@ -124,52 +113,28 @@ def MakeManipulationStation(time_step=0.002):
     builder.ExportOutput(plant.get_state_output_port(), "plant_continuous_state")
 
     diagram = builder.Build()
-    return diagram, scene_graph
+    return diagram
 
 # diagram = MakeManipulationStation()
 
 # display(SVG(pydot.graph_from_dot_data(diagram.GetGraphvizString())[0].create_svg()))# pydot.display(SVG(pydot.graph_from_dot_data(diagram.GetGraphvizString())[0].create_svg()))
 
+def step():
+    return
 
-def TestWithMeshcat():
+
+def test():
     builder = DiagramBuilder()
-    ms, sg = MakeManipulationStation()
-    station = builder.AddSystem(ms)
+    station = builder.AddSystem(make_manipulation_station())
 
-    # visualizer = ConnectMeshcatVisualizer(builder, builder.AddSystem(SceneGraph()), zmq_url=zmq_url)
-
-    # visualizer = ConnectDrakeVisualizer(
-    #     builder, output_port=station.GetOutputPort("geometry_query"), zmq_url=zmq_url)
-
-    #----------------
-    scene_graph = None
-    v = MeshcatVisualizer(scene_graph, zmq_url=zmq_url)
-    p = v.DeclareAbstractInputPort(
-            "geometry_query", AbstractValue.Make(QueryObject()))
-
-    visualizer = builder.AddSystem(v)
-    output_port = station.GetOutputPort("geometry_query")
-    # if output_port and isinstance(output_port.Allocate().get_value(),
-    #                               PoseBundle):
-    #     # TODO(russt): Remove this code path on deprecation of the pose_bundle
-    #     # api.
-    #     builder.Connect(output_port, visualizer.get_input_port(0))
-    #     return visualizer
-
-    # if output_port is None:
-    #     assert scene_graph, ("If no output_port is specified, then the "
-    #                          "scene_graph must be valid.")
-    #     output_port = scene_graph.get_query_output_port()
-    
-    builder.Connect(output_port, p)
-
-    #----------------
+    visualizer = ConnectMeshcatVisualizer(
+        builder, output_port=station.GetOutputPort("geometry_query"), zmq_url=zmq_url)
 
     diagram = builder.Build()
-    context = diagram.CreateDefaultContext()
-    # visualizer.load(visualizer.GetMyContextFromRoot(context))
-    visualizer.load()
 
+    context = diagram.CreateDefaultContext()
+    visualizer.load(visualizer.GetMyContextFromRoot(context))
     diagram.Publish(context)
 
-TestWithMeshcat()
+test()
+
