@@ -11,7 +11,7 @@ from station_builder import make_manipulation_station
 
 builder = DiagramBuilder()
 station = builder.AddSystem(make_manipulation_station(.01))
-
+plant = station.get_multibody_plant() #this doesn't work
 
 context = plant.CreateDefaultContext()
 dircol = DirectCollocation(

@@ -101,8 +101,8 @@ def make_manipulation_station(time_step=0.002):
     builder.Connect(iiwa_position.get_output_port(), desired_state_from_position.get_input_port())
 
     # Export commanded torques.
-    #builder.ExportOutput(adder.get_output_port(), "iiwa_torque_commanded")
-    #builder.ExportOutput(adder.get_output_port(), "iiwa_torque_measured")
+    # builder.ExportOutput(adder.get_output_port(), "iiwa_torque_commanded")
+    # builder.ExportOutput(adder.get_output_port(), "iiwa_torque_measured")
 
     # Cameras.
     AddRgbdSensors(builder, plant, scene_graph)
@@ -117,6 +117,32 @@ def make_manipulation_station(time_step=0.002):
 
 
 def test():
+    # builder = DiagramBuilder()
+    # manipulation_station = make_manipulation_station()
+    # station = builder.AddSystem(manipulation_station)
+
+    # visualizer = ConnectMeshcatVisualizer(
+    #     builder, output_port=station.GetOutputPort("geometry_query"), zmq_url=zmq_url)
+
+    # diagram = builder.Build()
+
+    # # context = diagram.CreateDefaultContext()
+    # # visualizer.load(visualizer.GetMyContextFromRoot(context))
+    # # diagram.Publish(context)
+
+    # simulator = Simulator(diagram)
+    # # station_context = station.GetMyContextFromRoot(simulator.get_mutable_context())
+    # # station.GetInputPort("iiwa_feedforward_torque").FixValue(station_context, np.zeros((7,1)))
+    # # station.GetInputPort("iiwa_position").FixValue(station_context, [0, np.pi/4, 0, -np.pi/2, 0, -np.pi/4, 0])
+    # # integrator.GetMyContextFromRoot(simulator.get_mutable_context()).get_mutable_continuous_state_vector().SetFromVector(station.GetIiwaPosition(station_context))
+    # # simulator.set_target_realtime_rate(1.0)
+
+
+    # visualizer.start_recording()
+    # simulator.AdvanceTo(5.0)
+    # visualizer.stop_recording()
+    # visualizer.publish_recording()
+
     builder = DiagramBuilder()
     station = builder.AddSystem(make_manipulation_station())
 
@@ -124,22 +150,11 @@ def test():
         builder, output_port=station.GetOutputPort("geometry_query"), zmq_url=zmq_url)
 
     diagram = builder.Build()
-    context = diagram.CreateDefaultContext()
-    visualizer.load(visualizer.GetMyContextFromRoot(context))
-    diagram.Publish(context)
-
     simulator = Simulator(diagram)
-    station_context = station.GetMyContextFromRoot(simulator.get_mutable_context())
-    station.GetInputPort("iiwa_feedforward_torque").FixValue(station_context, np.zeros((7,1)))
-    # station.GetInputPort("iiwa_position").FixValue(station_context, [0, np.pi/4, 0, -np.pi/2, 0, -np.pi/4, 0])
-    # integrator.GetMyContextFromRoot(simulator.get_mutable_context()).get_mutable_continuous_state_vector().SetFromVector(station.GetIiwaPosition(station_context))
-    simulator.set_target_realtime_rate(1.0)
-    simulator.AdvanceTo(.01)
 
     simulator.AdvanceTo(5.0)
 
-    while True: continue
-
-# test()
+if __name__ == "__main__":
+    test()
 
 
