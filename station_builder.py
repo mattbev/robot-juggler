@@ -115,13 +115,6 @@ def make_manipulation_station(time_step=0.002):
     diagram = builder.Build()
     return diagram
 
-# diagram = MakeManipulationStation()
-
-# display(SVG(pydot.graph_from_dot_data(diagram.GetGraphvizString())[0].create_svg()))# pydot.display(SVG(pydot.graph_from_dot_data(diagram.GetGraphvizString())[0].create_svg()))
-
-def step():
-    return
-
 
 def test():
     builder = DiagramBuilder()
@@ -131,10 +124,22 @@ def test():
         builder, output_port=station.GetOutputPort("geometry_query"), zmq_url=zmq_url)
 
     diagram = builder.Build()
-
     context = diagram.CreateDefaultContext()
     visualizer.load(visualizer.GetMyContextFromRoot(context))
     diagram.Publish(context)
 
-test()
+    simulator = Simulator(diagram)
+    station_context = station.GetMyContextFromRoot(simulator.get_mutable_context())
+    station.GetInputPort("iiwa_feedforward_torque").FixValue(station_context, np.zeros((7,1)))
+    # station.GetInputPort("iiwa_position").FixValue(station_context, [0, np.pi/4, 0, -np.pi/2, 0, -np.pi/4, 0])
+    # integrator.GetMyContextFromRoot(simulator.get_mutable_context()).get_mutable_continuous_state_vector().SetFromVector(station.GetIiwaPosition(station_context))
+    simulator.set_target_realtime_rate(1.0)
+    simulator.AdvanceTo(.01)
+
+    simulator.AdvanceTo(5.0)
+
+    while True: continue
+
+# test()
+
 
