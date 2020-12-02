@@ -115,36 +115,31 @@ def make_manipulation_station(time_step=0.002):
     builder.ExportOutput(plant.get_state_output_port(), "plant_continuous_state")
 
     diagram = builder.Build()
-    # builder_context = builder.CreateDefaultContext()
-    # iiwa_controller.get_input_port_desired_state().FixValue(builder_context, [0, np.pi/4, 0, -np.pi/2, 0, -np.pi/4, 0])
 
     return diagram
 
-def test():
-    # from pydrake.examples.manipulation_station import ManipulationStation
 
+def station_test():
     builder = DiagramBuilder()
     station = builder.AddSystem(make_manipulation_station())
-    # station = builder.AddSystem(ManipulationStation())
-    # station.SetupClutterClearingStation()
-    # station.Finalize()
 
     visualizer = ConnectMeshcatVisualizer(
         builder, output_port=station.GetOutputPort("geometry_query"), zmq_url=zmq_url)
 
     diagram = builder.Build()
-    context = diagram.CreateDefaultContext()
+    simulator = Simulator(diagram)
 
-    # plant = station.get_multibody_plant()
-    # plant.SetPositions(plant.GetMyContextFromRoot(context),
-    #                plant.GetModelInstanceByName("iiwa"),
-    #                [0, 0, 0, 0, 0, 0, 0])
+    context = simulator.get_context()
+    station_context = station.GetMyContextFromRoot(context)
 
-    simulator = Simulator(diagram)    
+    station.GetInputPort("iiwa_position").FixValue(station_context, [0, np.pi/2, 0, -np.pi/2, 0, -np.pi/4, 0])
+    
     visualizer.start_recording()
     simulator.AdvanceTo(5.0)
     visualizer.stop_recording()
     visualizer.publish_recording()
     
+
+
 if __name__ == "__main__":
-    test()
+    station_test()
