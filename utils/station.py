@@ -30,7 +30,7 @@ def make_manipulation_station(time_step=0.002):
     parser = Parser(plant)
     parser.AddModelFromFile(
         FindResource("models/camera_box.sdf"), "camera0")
-    parser.AddModelFromFile("paddle.sdf")
+    parser.AddModelFromFile("utils/end_effectors/paddle.sdf")
     plant.WeldFrames(plant.GetFrameByName("iiwa_link_7"), plant.GetFrameByName("base_link"))
     plant.Finalize()
 

@@ -12,7 +12,7 @@ from pydrake.all import (
     DiagramBuilder, ConnectMeshcatVisualizer, Simulator
 )
 
-from station import make_manipulation_station
+from utils.station import make_manipulation_station
 
 class Juggler:
     def __init__(self, time_step=0.002):
