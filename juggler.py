@@ -10,7 +10,7 @@ from meshcat.servers.zmqserver import start_zmq_server_as_subprocess
 proc, zmq_url, web_url = start_zmq_server_as_subprocess(server_args=server_args)
 
 from pydrake.all import (
-    DiagramBuilder, ConnectMeshcatVisualizer, Simulator, SignalLogger
+    DiagramBuilder, ConnectMeshcatVisualizer, Simulator
 )
 
 from utils.station import JugglerStation
