@@ -105,3 +105,4 @@ if __name__ == "__main__":
         juggler.command_iiwa_position(pos, duration=0.1, final=i==len(positions)-1, verbose=True)
 
     print(pd.DataFrame(juggler.log))
+    input("press any key to exit...")
