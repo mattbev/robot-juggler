@@ -33,3 +33,6 @@ pip3 install ipywidgets
     ```    
     jupyter labextension install @jupyter-widgets/jupyterlab-manager
     ```
+    
+## Useful resources
+[High-level Drake concepts](https://drake.guzhaoyuan.com/introduction/drake-concept)
