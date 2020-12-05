@@ -28,8 +28,7 @@ class InverseKinematics(LeafSystem):
 
         self.DeclareVectorInputPort("paddle_desired_pose", BasicVector(6))
         self.DeclareVectorInputPort("iiwa_pos_measured", BasicVector(7))
-        self.DeclareVectorOutputPort("iiwa_velocity", BasicVector(7), 
-                                     self.CalcOutput)
+        self.DeclareVectorOutputPort("iiwa_velocity", BasicVector(7), self.CalcOutput)
         self.iiwa_start = plant.GetJointByName("iiwa_joint_1").velocity_start()
         self.iiwa_end = plant.GetJointByName("iiwa_joint_7").velocity_start()
 
@@ -51,6 +50,8 @@ class InverseKinematics(LeafSystem):
         k = 0.2
         V_P_desired = k * diff / np.linalg.norm(diff)
         v = np.around(np.linalg.pinv(J_P).dot(V_P_desired), 8)
+        # #overwrite for debugging
+        v = [np.pi/4,0,0,0,0,0,0]
         output.SetFromVector(v)
 
 
@@ -83,8 +84,6 @@ class Juggler:
         self.plant = juggler_station.get_multibody_plant()
 
         # ---------------------
-        self.station_context = self.station.CreateDefaultContext()
-        self.plant_context = self.plant.CreateDefaultContext()
         self.ik_sys = self.builder.AddSystem(InverseKinematics(self.plant))
         self.ik_sys.set_name("ik_sys")
         integrator = self.builder.AddSystem(Integrator(7))
@@ -99,10 +98,13 @@ class Juggler:
         self.simulator.set_target_realtime_rate(1.0)
 
         self.context = self.simulator.get_context()
+        self.station_context = self.station.GetMyContextFromRoot(self.context)
+        self.plant_context = self.plant.GetMyContextFromRoot(self.context)
 
         self.controller = None #TODO: implement LeafSystem-based high level controller
 
-        self.station.GetInputPort("iiwa_position").FixValue(self.station_context, [0, np.pi/4, 0, -np.pi/2, 0, -np.pi/4, 0 ])
+        # self.plant.SetPositions(self.plant_context, self.iiwa, q)
+        # self.station.GetInputPort("iiwa_position").FixValue(self.station_context, [0, np.pi/4, 0, -np.pi/2, 0, -np.pi/4, 0 ])
 
 
     def command_iiwa_position(self, iiwa_position, simulate=True, duration=0.1, final=True, verbose=False):
@@ -118,6 +120,8 @@ class Juggler:
         """        
         self.station.GetInputPort("iiwa_position").FixValue(
             self.station_context, iiwa_position)
+        
+        self.diagram.GetInputPort("paddle_desired_pose").FixValue(self.context, [0,0,0,0,0,0])
         
         if simulate:
             self.visualizer.start_recording()
@@ -135,7 +139,7 @@ class Juggler:
         self.time += duration
 
 
-    def t(self, simulate=True, duration=0.1, final=True, verbose=False):
+    def t(self, desired, simulate=True, duration=0.1, final=True, verbose=False):
         """
         TODO
 
@@ -146,20 +150,11 @@ class Juggler:
             verbose (bool, optional): whether or not to print measured position change. Defaults to False.
         """        
 
-        desired = [
-            0, #roll
-            0, #pitch
-            0, #yaw
-            2, #x
-            0, #y
-            0  #z
-        ]
-
         self.diagram.GetInputPort("paddle_desired_pose").FixValue(self.context, desired)
         
         if simulate:
             self.time = round(self.time, 5)
-            print(f"time: {self.time}")
+            # print(f"time: {self.time}")
             # print(self.context)
             self.visualizer.start_recording()
             self.simulator.AdvanceTo(self.time + duration)
@@ -193,13 +188,13 @@ if __name__ == "__main__":
     positions = [[r, np.pi/4, 0, -np.pi/2, 0, -np.pi/4, 0 ] for r in np.linspace(0, np.pi, 40)]
     for i, pos in enumerate(positions):
         # juggler.command_iiwa_position(pos, duration=0.1, final=i==len(positions)-1, verbose=False)
-        juggler.t(duration=0.1, final=i==len(positions)-1, verbose=False)
+        juggler.t(desired=[0, 0, 0, -(i/40)**2+1.5, i/40, 0],duration=0.1, final=i==len(positions)-1, verbose=False)
 
     df = pd.DataFrame(juggler.log)
     print(df)
     input("\npress enter key to exit...")
 
-    x = np.linspace(0, np.pi, 40)
-    for i in range(7):
-        plt.plot(x, df[str(i)], label=i)
-    plt.show()
+    # x = np.linspace(0, np.pi, 40)
+    # for i in range(7):
+    #     plt.plot(x, df[str(i)], label=i)
+    # plt.show()
