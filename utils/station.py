@@ -14,7 +14,7 @@ from pydrake.all import (
     Adder, AddMultibodyPlantSceneGraph, ConnectMeshcatVisualizer, DiagramBuilder, 
     InverseDynamicsController, MultibodyPlant, Parser, SceneGraph, Simulator, 
     PassThrough, Demultiplexer, StateInterpolatorWithDiscreteDerivative, 
-    SchunkWsgPositionController, MakeMultibodyStateToWsgStateSystem
+    SchunkWsgPositionController, MakeMultibodyStateToWsgStateSystem, Integrator
 )
 from manipulation.scenarios import AddIiwa, AddWsg, AddRgbdSensors
 from manipulation.utils import FindResource
@@ -25,7 +25,7 @@ class JugglerStation:
         self.ki = ki
         self.kd = kd
         self.time_step = time_step
-        self.diagram, self.plant = self.make_manipulation_station()
+        self.diagram, self.plant = self.make_manipulation_station(self.kp, self.ki, self.kd, self.time_step)
 
     def get_multibody_plant(self):
         return self.plant
@@ -60,7 +60,6 @@ class JugglerStation:
         parser.AddModelFromFile("utils/end_effectors/paddle.sdf")
         plant.WeldFrames(plant.GetFrameByName("iiwa_link_7"), plant.GetFrameByName("base_link"))
         plant.Finalize()
-
 
         num_iiwa_positions = plant.num_positions(iiwa)
 
