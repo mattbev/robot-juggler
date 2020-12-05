@@ -12,7 +12,7 @@ proc, zmq_url, web_url = start_zmq_server_as_subprocess(server_args=server_args)
 
 from pydrake.all import (
     DiagramBuilder, ConnectMeshcatVisualizer, Simulator, SignalLogger, JacobianWrtVariable, Integrator, 
-    LeafSystem, BasicVector, RollPitchYaw
+    LeafSystem, BasicVector, RollPitchYaw, ConstantVectorSource
 )
 
 from utils.station import JugglerStation
@@ -26,7 +26,7 @@ class InverseKinematics(LeafSystem):
         self.P = plant.GetBodyByName("base_link").body_frame()
         self.W = plant.world_frame()
 
-        self.DeclareVectorInputPort("paddle_desired_pose", BasicVector(6))
+        self.DeclareVectorInputPort("paddle_desired_velocity", BasicVector(6))
         self.DeclareVectorInputPort("iiwa_pos_measured", BasicVector(7))
         self.DeclareVectorOutputPort("iiwa_velocity", BasicVector(7), self.CalcOutput)
         self.iiwa_start = plant.GetJointByName("iiwa_joint_1").velocity_start()
@@ -34,24 +34,16 @@ class InverseKinematics(LeafSystem):
 
     def CalcOutput(self, context, output):
         q = self.GetInputPort("iiwa_pos_measured").Eval(context)
-        X_P = self.GetInputPort("paddle_desired_pose").Eval(context)
+        V_P_desired = self.GetInputPort("paddle_desired_velocity").Eval(context)
         self.plant.SetPositions(self.plant_context, self.iiwa, q)
         J_P = self.plant.CalcJacobianSpatialVelocity(
             self.plant_context, JacobianWrtVariable.kQDot, 
-            self.P, [0,0,0], self.plant.world_frame(), self.plant.world_frame())
+            self.P, [0,0,0], self.W, self.W)
         J_P = J_P[:,self.iiwa_start:self.iiwa_end+1]
-        
-        X_P_0 = self.plant.EvalBodyPoseInWorld(self.plant_context, self.plant.GetBodyByName("base_link"))
 
-        rpy = RollPitchYaw(X_P_0.rotation()).vector()
-        xyz = X_P_0.translation()
-        diff = X_P - np.hstack([rpy, xyz])
-
-        k = 0.2
-        V_P_desired = k * diff / np.linalg.norm(diff)
-        v = np.around(np.linalg.pinv(J_P).dot(V_P_desired), 8)
+        v = np.linalg.pinv(J_P).dot(V_P_desired)
         # #overwrite for debugging
-        v = [np.pi/4,0,0,0,0,0,0]
+        # v = [np.pi/4,0,0,0,0,0,0]
         output.SetFromVector(v)
 
 
@@ -90,7 +82,9 @@ class Juggler:
         self.builder.Connect(self.station.GetOutputPort("iiwa_position_measured"), self.ik_sys.GetInputPort("iiwa_pos_measured"))
         self.builder.Connect(self.ik_sys.get_output_port(), integrator.get_input_port())
         self.builder.Connect(integrator.get_output_port(), self.station.GetInputPort("iiwa_position"))
-        self.builder.ExportInput(self.ik_sys.GetInputPort("paddle_desired_pose"), "paddle_desired_pose")
+        desired_vel = self.builder.AddSystem(ConstantVectorSource([0, 0, 0, 0.1, 0, 0]))
+        self.builder.Connect(desired_vel.get_output_port(), self.ik_sys.GetInputPort("paddle_desired_velocity"))
+        # self.builder.ExportInput(self.ik_sys.GetInputPort("paddle_desired_velocity"), "paddle_desired_velocity")
         # ---------------------
 
         self.diagram = self.builder.Build()
@@ -101,10 +95,14 @@ class Juggler:
         self.station_context = self.station.GetMyContextFromRoot(self.context)
         self.plant_context = self.plant.GetMyContextFromRoot(self.context)
 
-        self.controller = None #TODO: implement LeafSystem-based high level controller
+        # self.plant.SetPositions(self.plant_context, self.plant.GetModelInstanceByName("iiwa7"), [0, np.pi/2, 0, -np.pi/2, 0, -np.pi/4, 0])
 
-        # self.plant.SetPositions(self.plant_context, self.iiwa, q)
-        # self.station.GetInputPort("iiwa_position").FixValue(self.station_context, [0, np.pi/4, 0, -np.pi/2, 0, -np.pi/4, 0 ])
+        self.station.GetInputPort("iiwa_feedforward_torque").FixValue(self.station_context, np.zeros((7,1)))
+        iiwa_model_instance = self.plant.GetModelInstanceByName("iiwa7")
+        iiwa_q = self.plant.GetPositions(self.plant_context, iiwa_model_instance)
+        integrator.GetMyContextFromRoot(self.context).get_mutable_continuous_state_vector().SetFromVector(iiwa_q)
+        
+        self.controller = None #TODO: implement LeafSystem-based high level controller
 
 
     def command_iiwa_position(self, iiwa_position, simulate=True, duration=0.1, final=True, verbose=False):
@@ -121,7 +119,7 @@ class Juggler:
         self.station.GetInputPort("iiwa_position").FixValue(
             self.station_context, iiwa_position)
         
-        self.diagram.GetInputPort("paddle_desired_pose").FixValue(self.context, [0,0,0,0,0,0])
+        self.diagram.GetInputPort("paddle_desired_velocity").FixValue(self.context, [0,0,0,0,0,0])
         
         if simulate:
             self.visualizer.start_recording()
@@ -131,7 +129,7 @@ class Juggler:
             self.log.append(self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context))
             
             if verbose:
-                print("Commanding position: {}\nMeasured Position: {}\n\n".format(iiwa_position, self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context)))
+                print("Commanding position: {}\nMeasured Position: {}\n\n".format(iiwa_position, np.around(self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context), 3)))
             
             if final:
                 self.visualizer.publish_recording()
@@ -150,12 +148,10 @@ class Juggler:
             verbose (bool, optional): whether or not to print measured position change. Defaults to False.
         """        
 
-        self.diagram.GetInputPort("paddle_desired_pose").FixValue(self.context, desired)
+        # self.diagram.GetInputPort("paddle_desired_velocity").FixValue(self.context, desired)
         
         if simulate:
-            self.time = round(self.time, 5)
-            # print(f"time: {self.time}")
-            # print(self.context)
+            # self.time = round(self.time, 5)
             self.visualizer.start_recording()
             self.simulator.AdvanceTo(self.time + duration)
             self.visualizer.stop_recording()
@@ -163,7 +159,7 @@ class Juggler:
             self.log.append(self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context))
             
             if verbose:
-                print("Time: {}\nMeasured Position: {}\n\n".format(self.time, self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context)))
+                print("Time: {}\nMeasured Position: {}\n\n".format(self.time, np.around(self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context), 3)))
             
             if final:
                 self.visualizer.publish_recording()
@@ -186,9 +182,10 @@ if __name__ == "__main__":
         time_step=time_step)
 
     positions = [[r, np.pi/4, 0, -np.pi/2, 0, -np.pi/4, 0 ] for r in np.linspace(0, np.pi, 40)]
-    for i, pos in enumerate(positions):
+    # for i, pos in enumerate(positions):
         # juggler.command_iiwa_position(pos, duration=0.1, final=i==len(positions)-1, verbose=False)
-        juggler.t(desired=[0, 0, 0, -(i/40)**2+1.5, i/40, 0],duration=0.1, final=i==len(positions)-1, verbose=False)
+        # juggler.t(desired=[0, 0, 0, 0, 0, 0.1],duration=0.1, final=i==len(positions)-1, verbose=False)
+    juggler.t(desired=[0, 0, 0, 0, 0, 0],duration=10, final=True, verbose=True)
 
     df = pd.DataFrame(juggler.log)
     print(df)
@@ -196,5 +193,5 @@ if __name__ == "__main__":
 
     # x = np.linspace(0, np.pi, 40)
     # for i in range(7):
-    #     plt.plot(x, df[str(i)], label=i)
+    #     plt.plot(x, df[i], label=i)
     # plt.show()
