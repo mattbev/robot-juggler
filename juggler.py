@@ -37,7 +37,7 @@ class InverseKinematics(LeafSystem):
         V_P_desired = self.GetInputPort("paddle_desired_velocity").Eval(context)
         self.plant.SetPositions(self.plant_context, self.iiwa, q)
         J_P = self.plant.CalcJacobianSpatialVelocity(
-            self.plant_context, JacobianWrtVariable.kQDot, 
+            self.plant_context, JacobianWrtVariable.kV, 
             self.P, [0,0,0], self.W, self.W)
         J_P = J_P[:,self.iiwa_start:self.iiwa_end+1]
 
@@ -82,9 +82,10 @@ class Juggler:
         self.builder.Connect(self.station.GetOutputPort("iiwa_position_measured"), self.ik_sys.GetInputPort("iiwa_pos_measured"))
         self.builder.Connect(self.ik_sys.get_output_port(), integrator.get_input_port())
         self.builder.Connect(integrator.get_output_port(), self.station.GetInputPort("iiwa_position"))
-        desired_vel = self.builder.AddSystem(ConstantVectorSource([0, 0, 0, 0.1, 0, 0]))
-        self.builder.Connect(desired_vel.get_output_port(), self.ik_sys.GetInputPort("paddle_desired_velocity"))
-        # self.builder.ExportInput(self.ik_sys.GetInputPort("paddle_desired_velocity"), "paddle_desired_velocity")
+        # Useful for debugging
+        # desired_vel = self.builder.AddSystem(ConstantVectorSource([0, 0, 0, .1, 0, 0]))
+        # self.builder.Connect(desired_vel.get_output_port(), self.ik_sys.GetInputPort("paddle_desired_velocity"))
+        self.builder.ExportInput(self.ik_sys.GetInputPort("paddle_desired_velocity"), "paddle_desired_velocity")
         # ---------------------
 
         self.diagram = self.builder.Build()
@@ -95,7 +96,7 @@ class Juggler:
         self.station_context = self.station.GetMyContextFromRoot(self.context)
         self.plant_context = self.plant.GetMyContextFromRoot(self.context)
 
-        # self.plant.SetPositions(self.plant_context, self.plant.GetModelInstanceByName("iiwa7"), [0, np.pi/2, 0, -np.pi/2, 0, -np.pi/4, 0])
+        self.plant.SetPositions(self.plant_context, self.plant.GetModelInstanceByName("iiwa7"), [0, np.pi/4, 0, -np.pi/2, 0, -np.pi/4, 0])
 
         self.station.GetInputPort("iiwa_feedforward_torque").FixValue(self.station_context, np.zeros((7,1)))
         iiwa_model_instance = self.plant.GetModelInstanceByName("iiwa7")
@@ -148,7 +149,7 @@ class Juggler:
             verbose (bool, optional): whether or not to print measured position change. Defaults to False.
         """        
 
-        # self.diagram.GetInputPort("paddle_desired_velocity").FixValue(self.context, desired)
+        self.diagram.GetInputPort("paddle_desired_velocity").FixValue(self.context, desired)
         
         if simulate:
             # self.time = round(self.time, 5)
@@ -185,7 +186,25 @@ if __name__ == "__main__":
     # for i, pos in enumerate(positions):
         # juggler.command_iiwa_position(pos, duration=0.1, final=i==len(positions)-1, verbose=False)
         # juggler.t(desired=[0, 0, 0, 0, 0, 0.1],duration=0.1, final=i==len(positions)-1, verbose=False)
-    juggler.t(desired=[0, 0, 0, 0, 0, 0],duration=10, final=True, verbose=True)
+    velocities = [[0, 0, 0, .2*np.cos(t), .2*np.sin(t/1.5), 0] for t in np.linspace(0, 10, 50)]
+    velocities = [
+        [0, 0, 0, 0, -1, 0], 
+        [0, 0, 0, 0, 1, 0],
+        [0, 0, 0, 0, -1, 0], 
+        [0, 0, 0, 0, 1, 0], 
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, -1, 0, 0], 
+        [0, 0, 0, 1, 0, 0],
+        [0, 0, 0, -1, 0, 0], 
+        [0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, -1],
+        [0, 0, 0, 0, 0, 1], 
+        [0, 0, 0, 0, 0, -1],
+        [0, 0, 0, 0, 0, 1]]
+    durations = [.25, .5, .5, .25, .25, .25, .5, .5, .25, .25, .25, .5, .5, .25]
+    for i, vel in enumerate(velocities):
+        juggler.t(vel, duration=durations[i], final=i==len(velocities)-1, verbose=True)
 
     df = pd.DataFrame(juggler.log)
     print(df)
