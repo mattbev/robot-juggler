@@ -70,7 +70,7 @@ class VelocityMirror(LeafSystem):
         self.plant.SetFreeBodySpatialVelocity(self.Ball, V_B, self.plant_context)
         v_Ball = self.plant.EvalBodySpatialVelocityInWorld(self.plant_context, self.Ball).translational()
         # print(v_Ball)
-        output.SetFromVector(np.hstack([0, 0, 0, v_Ball[0], v_Ball[1], -v_Ball[2]]))
+        output.SetFromVector(np.hstack([0, 0, 0, v_Ball[0], v_Ball[1], -v_Ball[2]))
 
 
 class Juggler:
