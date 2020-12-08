@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <sdf version="1.7">
   <model name="floor">
-    <pose>0 0 0 0 0 0</pose>
+    <pose>0 0 -1 0 0 0</pose>
     <link name="floor">
       <visual name="floor">
         <geometry>
@@ -10,7 +10,7 @@
           </box>
         </geometry>
         <material>
-          <diffuse>0 0 0 1.0</diffuse>
+          <diffuse>255 255 255 0</diffuse>
         </material>
       </visual>
       <collision name="floor_collision">
@@ -24,12 +24,12 @@
                 <restitution_coefficient> 1.0 </restitution_coefficient>
                 <threshold>0.</threshold>
             </bounce>
-            <friction>
+            <!-- <friction>
               <ode>
                 <mu>1.0</mu>
                 <mu2>1.0</mu2>
               </ode>
-            </friction>
+            </friction> -->
             <!-- <contact>
               <ode>
                 <max_vel>20</max_vel>
