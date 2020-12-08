@@ -20,12 +20,13 @@ from manipulation.scenarios import AddIiwa, AddWsg, AddRgbdSensors
 from manipulation.utils import FindResource
 
 class JugglerStation:
-    def __init__(self, kp=100, ki=1, kd=20, time_step=0.002):
+    def __init__(self, kp=100, ki=1, kd=20, time_step=0.002, show_axis=False):
         self.kp = kp
         self.ki = ki
         self.kd = kd
         self.time_step = time_step
-        self.diagram, self.plant = self.make_manipulation_station(self.kp, self.ki, self.kd, self.time_step)
+        self.show_axis = show_axis
+        self.diagram, self.plant = self.make_manipulation_station(self.kp, self.ki, self.kd, self.time_step, self.show_axis)
 
     def get_multibody_plant(self):
         return self.plant
@@ -34,7 +35,7 @@ class JugglerStation:
         return self.diagram
 
     @staticmethod
-    def make_manipulation_station(kp=100, ki=1, kd=20, time_step=0.002):
+    def make_manipulation_station(kp=100, ki=1, kd=20, time_step=0.002, show_axis=False):
         """
         Create the juggler manipulation station.
 
@@ -52,12 +53,16 @@ class JugglerStation:
         # Add (only) the iiwa, WSG, and cameras to the scene.
         plant, scene_graph = AddMultibodyPlantSceneGraph(
             builder, time_step=time_step)
-        iiwa = AddIiwa(plant)
+        iiwa = AddIiwa(plant, collision_model="with_box_collision")
         wsg = AddWsg(plant, iiwa)
         parser = Parser(plant)
         parser.AddModelFromFile(
             FindResource("models/camera_box.sdf"), "camera0")
-        parser.AddModelFromFile("utils/end_effectors/paddle.sdf")
+        parser.AddModelFromFile("utils/models/floor.sdf")
+        parser.AddModelFromFile("utils/models/paddle.sdf")
+        parser.AddModelFromFile("utils/models/ball.sdf")
+        if show_axis:   
+            parser.AddModelFromFile("utils/models/reflection_axis.sdf")
         plant.WeldFrames(plant.GetFrameByName("iiwa_link_7"), plant.GetFrameByName("base_link"))
         plant.Finalize()
 
