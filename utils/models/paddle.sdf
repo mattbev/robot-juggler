@@ -5,21 +5,22 @@
     <!--
     TODO: Figure out what this means/does and how to change it
     (Currently copied from foam brick sdf)       -->
-      <!-- <inertial> -->
+      <inertial>
         <!-- <pose>0 0 0.25 0 1.5708 0</pose> -->
-        <!-- <mass>1.0</mass> -->
-        <!-- <inertia>
-          <ixx>1.17e-5</ixx>
+        <mass>.001</mass>
+        <inertia>
+          <ixx>0</ixx>
           <ixy>0</ixy>
           <ixz>0</ixz>
-          <iyy>1.9e-5</iyy>
+          <iyy>0</iyy>
           <iyz>0</iyz>
-          <izz>1.9e-5</izz>
-        </inertia> -->
-      <!-- </inertial> -->
+          <izz>0</izz>
+        </inertia>
+      </inertial>
 
       <visual name="paddle_link">
-        <pose>0 0 0.25 0 1.5708 0</pose>
+        <!-- <pose>0 0 0.25 0 1.5708 0</pose> -->
+        <pose>0 0 0 0 0 0</pose>
         <geometry>
           <cylinder>
             <radius>0.175</radius>
@@ -31,7 +32,8 @@
         </material>
       </visual>
       <visual name="handle_link">
-        <pose>0 0 .06 0 0 0</pose>
+        <pose> .19 0 0 0 1.5708 0</pose>
+        <!-- <pose>0 0 -.19 0 0 0</pose> -->
         <geometry>
           <box>
             <size>.009 .075 .05</size>
@@ -42,7 +44,8 @@
         </material>
       </visual>
       <collision name="collision_cylinder">
-        <pose>0 0 0.25 0 1.5708 0</pose>
+        <!-- <pose>0 0 0.25 0 1.5708 0</pose> -->
+        <pose>0 0 0 0 0 0</pose>
         <geometry>
           <cylinder>
             <radius>0.175</radius>

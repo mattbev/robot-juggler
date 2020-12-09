@@ -11,11 +11,11 @@ from meshcat.servers.zmqserver import start_zmq_server_as_subprocess
 proc, zmq_url, web_url = start_zmq_server_as_subprocess(server_args=server_args)
 
 from pydrake.all import (
-    DiagramBuilder, ConnectMeshcatVisualizer, Simulator, Integrator
+    DiagramBuilder, ConnectMeshcatVisualizer, ConstantVectorSource, Simulator, Integrator, AddTriad
 )
 
 from utils.station import JugglerStation
-from utils.kinematics import InverseKinematics, VelocityMirror, PaddleTilt
+from utils.kinematics import InverseKinematics, VelocityMirror, AngularVelocityTilt
 
 
 class Juggler:
@@ -48,26 +48,29 @@ class Juggler:
         self.plant = juggler_station.get_multibody_plant()
 
         # ---------------------
-        self.ik_sys = self.builder.AddSystem(InverseKinematics(self.plant))
-        self.ik_sys.set_name("ik_sys")
-        self.mirror = self.builder.AddSystem(VelocityMirror(self.plant))
-        self.mirror.set_name("mirror")
+        ik_sys = self.builder.AddSystem(InverseKinematics(self.plant))
+        ik_sys.set_name("ik_sys")
+        v_mirror = self.builder.AddSystem(VelocityMirror(self.plant))
+        v_mirror.set_name("v_mirror")
+        w_tilt = self.builder.AddSystem(AngularVelocityTilt(self.plant))
+        w_tilt.set_name("w_tilt")
         integrator = self.builder.AddSystem(Integrator(7))
-        tilt = self.builder.AddSystem(PaddleTilt(self.plant))
-        tilt.set_name("tilt")
-        self.builder.Connect(self.station.GetOutputPort("iiwa_position_measured"), self.ik_sys.GetInputPort("iiwa_pos_measured"))
-        self.builder.Connect(self.ik_sys.get_output_port(), integrator.get_input_port())
-        self.builder.Connect(integrator.get_output_port(), tilt.GetInputPort("assigned_q"))
-        self.builder.Connect(self.station.GetOutputPort("iiwa_position_measured"), tilt.GetInputPort("iiwa_pos_measured"))
-        self.builder.Connect(tilt.get_output_port(), self.station.GetInputPort("iiwa_position"))
-        
-        # Useful for debugging
-        # desired_vel = self.builder.AddSystem(ConstantVectorSource([0, 0, 0, .1, 0, 0]))
-        # self.builder.Connect(desired_vel.get_output_port(), self.ik_sys.GetInputPort("paddle_desired_velocity"))
-        self.builder.Connect(self.mirror.get_output_port(), self.ik_sys.GetInputPort("paddle_desired_velocity"))
-        self.builder.ExportInput(self.mirror.GetInputPort("ball_pose"), "ball_pose")
-        self.builder.ExportInput(self.mirror.GetInputPort("ball_velocity"), "ball_velocity")
+        self.builder.Connect(self.station.GetOutputPort("iiwa_position_measured"), ik_sys.GetInputPort("iiwa_pos_measured"))
+        self.builder.Connect(ik_sys.get_output_port(), integrator.get_input_port())
+        self.builder.Connect(integrator.get_output_port(), self.station.GetInputPort("iiwa_position"))
 
+        self.builder.Connect(self.station.GetOutputPort("iiwa_position_measured"), w_tilt.GetInputPort("iiwa_pos_measured"))
+        self.builder.Connect(self.station.GetOutputPort("iiwa_position_measured"), v_mirror.GetInputPort("iiwa_pos_measured"))
+        self.builder.Connect(self.station.GetOutputPort("iiwa_velocity_estimated"), v_mirror.GetInputPort("iiwa_velocity_estimated"))
+        self.builder.Connect(w_tilt.get_output_port(), ik_sys.GetInputPort("paddle_desired_angular_velocity"))
+        self.builder.Connect(v_mirror.get_output_port(), ik_sys.GetInputPort("paddle_desired_velocity"))
+
+        self.builder.ExportInput(v_mirror.GetInputPort("ball_pose"), "v_ball_pose")
+        self.builder.ExportInput(v_mirror.GetInputPort("ball_velocity"), "ball_velocity")
+        self.builder.ExportInput(w_tilt.GetInputPort("ball_pose"), "w_ball_pose")
+        # Useful for debugging
+        # desired_vel = self.builder.AddSystem(ConstantVectorSource([0, 0, 0]))
+        # self.builder.Connect(desired_vel.get_output_port(), ik_sys.GetInputPort("paddle_desired_angular_velocity"))
         # ---------------------
 
         self.diagram = self.builder.Build()
@@ -80,7 +83,6 @@ class Juggler:
 
         # self.plant.SetPositions(self.plant_context, self.plant.GetModelInstanceByName("iiwa7"), [0, np.pi/4, 0, -np.pi/2, 0, -np.pi/4, 0])
         self.plant.SetPositions(self.plant_context, self.plant.GetModelInstanceByName("iiwa7"), [0, np.pi/3, 0, -np.pi/2, 0, -np.pi/3, 0])
-        print(self.plant.EvalBodyPoseInWorld(self.plant_context, self.plant.GetBodyByName("base_link")).translation())
         self.station.GetInputPort("iiwa_feedforward_torque").FixValue(self.station_context, np.zeros((7,1)))
         iiwa_model_instance = self.plant.GetModelInstanceByName("iiwa7")
         iiwa_q = self.plant.GetPositions(self.plant_context, iiwa_model_instance)
@@ -130,19 +132,28 @@ class Juggler:
             verbose (bool, optional): whether or not to print measured position change. Defaults to False.
         """        
         ball_pose = self.plant.EvalBodyPoseInWorld(self.plant_context, self.plant.GetBodyByName("ball")).translation()
-        ball_velocity = self.plant.EvalBodySpatialVelocityInWorld(self.plant_context, self.plant.GetBodyByName("ball"))
-        ball_velocity = np.hstack([ball_velocity.rotational(), ball_velocity.translational()])
-        self.diagram.GetInputPort("ball_pose").FixValue(self.context, ball_pose)
+        ball_velocity = self.plant.EvalBodySpatialVelocityInWorld(self.plant_context, self.plant.GetBodyByName("ball")).translational()
+        # ball_velocity = np.hstack([ball_velocity.rotational(), ball_velocity.translational()])
+        self.diagram.GetInputPort("w_ball_pose").FixValue(self.context, ball_pose)
+        self.diagram.GetInputPort("v_ball_pose").FixValue(self.context, ball_pose)
         self.diagram.GetInputPort("ball_velocity").FixValue(self.context, ball_velocity) 
+
+        
+        # transform = self.plant.EvalBodyPoseInWorld(self.plant_context, self.plant.GetBodyByName("base_link")).GetAsMatrix4()
+        # AddTriad(self.visualizer.vis, name=f"paddle_{round(self.time, 1)}", prefix='', length=0.15, radius=.006)
+        # self.visualizer.vis[''][f"paddle_{round(self.time, 1)}"].set_transform(transform)
+
         if simulate:
             self.visualizer.start_recording()
             self.simulator.AdvanceTo(self.time + duration)
             self.visualizer.stop_recording()
             
             self.log.append(self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context))
-            
+            # print("Command: ", np.around(self.station.GetOutputPort("iiwa_position_command").Eval(self.station_context), 3))
+            # print("Measure: ", np.around(self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context), 3), "\n")
+
             if verbose:
-                print("Time: {}\nMeasured Position: {}\n\n".format(self.time, np.around(self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context), 3)))
+                print("Time: {}\nMeasured Position: {}\n\n".format(round(self.time, 3), np.around(self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context), 3)))
             
             if final:
                 self.visualizer.publish_recording()
@@ -154,8 +165,8 @@ class Juggler:
 
 if __name__ == "__main__":
     kp = 300
-    ki = 20
-    kd = 20
+    ki = 10
+    kd = 5
     time_step = .002
 
     juggler = Juggler(
@@ -182,7 +193,7 @@ if __name__ == "__main__":
     #     juggler.t(vel, duration=durations[i], final=i==len(velocities)-1, verbose=True)
     
     
-    seconds = 2
+    seconds = 5
     for i in range(int(seconds*10)):
         juggler.step(duration=0.1, final=i==seconds*10-1, verbose=True)
 

@@ -14,7 +14,8 @@ from pydrake.all import (
     Adder, AddMultibodyPlantSceneGraph, ConnectMeshcatVisualizer, DiagramBuilder, 
     InverseDynamicsController, MultibodyPlant, Parser, SceneGraph, Simulator, 
     PassThrough, Demultiplexer, StateInterpolatorWithDiscreteDerivative, 
-    SchunkWsgPositionController, MakeMultibodyStateToWsgStateSystem, Integrator
+    SchunkWsgPositionController, MakeMultibodyStateToWsgStateSystem, Integrator,
+    RigidTransform, RollPitchYaw
 )
 from manipulation.scenarios import AddIiwa, AddWsg, AddRgbdSensors
 from manipulation.utils import FindResource
@@ -61,9 +62,7 @@ class JugglerStation:
         parser.AddModelFromFile("utils/models/floor.sdf")
         parser.AddModelFromFile("utils/models/paddle.sdf")
         parser.AddModelFromFile("utils/models/ball.sdf")
-        if show_axis:   
-            parser.AddModelFromFile("utils/models/reflection_axis.sdf")
-        plant.WeldFrames(plant.GetFrameByName("iiwa_link_7"), plant.GetFrameByName("base_link"))
+        plant.WeldFrames(plant.GetFrameByName("iiwa_link_7"), plant.GetFrameByName("base_link"), RigidTransform(RollPitchYaw(0, np.pi/2, 0), [0, 0, 0.25]))
         plant.Finalize()
 
         num_iiwa_positions = plant.num_positions(iiwa)
@@ -83,7 +82,7 @@ class JugglerStation:
 
         # Make the plant for the iiwa controller to use.
         controller_plant = MultibodyPlant(time_step=time_step)
-        controller_iiwa = AddIiwa(controller_plant)
+        controller_iiwa = AddIiwa(controller_plant, collision_model="with_box_collision")
         # AddWsg(controller_plant, controller_iiwa, welded=True)
         controller_plant.Finalize()
 
