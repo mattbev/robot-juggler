@@ -7,7 +7,7 @@
     (Currently copied from foam brick sdf)       -->
       <inertial>
         <!-- <pose>0 0 0.25 0 1.5708 0</pose> -->
-        <mass>.001</mass>
+        <mass>.0001</mass>
         <inertia>
           <ixx>0</ixx>
           <ixy>0</ixy>
@@ -60,7 +60,7 @@
             </ode>
           </friction>
           <bounce>
-              <restitution_coefficient> 1. </restitution_coefficient>
+              <restitution_coefficient> 0. </restitution_coefficient>
               <threshold>.0.</threshold>
           </bounce>
         </surface>

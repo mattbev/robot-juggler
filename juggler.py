@@ -133,7 +133,6 @@ class Juggler:
         """        
         ball_pose = self.plant.EvalBodyPoseInWorld(self.plant_context, self.plant.GetBodyByName("ball")).translation()
         ball_velocity = self.plant.EvalBodySpatialVelocityInWorld(self.plant_context, self.plant.GetBodyByName("ball")).translational()
-        # ball_velocity = np.hstack([ball_velocity.rotational(), ball_velocity.translational()])
         self.diagram.GetInputPort("w_ball_pose").FixValue(self.context, ball_pose)
         self.diagram.GetInputPort("v_ball_pose").FixValue(self.context, ball_pose)
         self.diagram.GetInputPort("ball_velocity").FixValue(self.context, ball_velocity) 
@@ -166,7 +165,7 @@ class Juggler:
 if __name__ == "__main__":
     kp = 300
     ki = 10
-    kd = 5
+    kd = 30
     time_step = .002
 
     juggler = Juggler(
@@ -193,7 +192,7 @@ if __name__ == "__main__":
     #     juggler.t(vel, duration=durations[i], final=i==len(velocities)-1, verbose=True)
     
     
-    seconds = 5
+    seconds = 10
     for i in range(int(seconds*10)):
         juggler.step(duration=0.1, final=i==seconds*10-1, verbose=True)
 

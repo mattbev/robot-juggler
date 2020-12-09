@@ -63,16 +63,19 @@ class VelocityMirror(LeafSystem):
         p_Ball[2] = 0
         # p_Ball[2] = 2 * 0.75 - p_Ball[2]
         v_Ball = np.array(self.GetInputPort("ball_velocity").Eval(context))
-        v_Ball[2] = -1*v_Ball[2]
+        if v_Ball[2] >= 0:
+            v_Ball[2] = -1*v_Ball[2]
+        else:
+            v_Ball[2] = -1*v_Ball[2]   
         self.plant.SetPositionsAndVelocities(self.plant_context, self.iiwa, np.hstack([q, q_dot]))
         p_Paddle = np.array(self.plant.EvalBodyPoseInWorld(self.plant_context, self.Paddle).translation())
         p_Paddle[2] = 0
         v_Paddle = np.array(self.plant.EvalBodySpatialVelocityInWorld(self.plant_context, self.Paddle).translational())
         
-        K_p = 3.5
+        K_p = 3
         K_d = 1
         v_P_desired = K_p*(p_Ball - p_Paddle) + K_d*(v_Ball - v_Paddle)
-        # v_P_desired[2] = v_Ball[2]
+        v_P_desired[2] = .8*v_Ball[2]
 
         output.SetFromVector(v_P_desired)
 
@@ -100,17 +103,19 @@ class AngularVelocityTilt(LeafSystem):
         self.plant.SetPositions(self.plant_context, self.iiwa, q)
 
         R_P = RollPitchYaw(self.plant.EvalBodyPoseInWorld(self.plant_context, self.P).rotation()).vector()
-        roll_current, pitch_current = R_P[0], R_P[1]
+        roll_current, pitch_current, yaw_current = R_P[0], R_P[1], R_P[2]
         # print(roll_current, pitch_current, R_P[2])
         B_x, B_y = X_B[0], X_B[1]
-        roll_nom, pitch_nom = -np.pi, 0
-        roll_des, pitch_des = roll_nom, pitch_nom
-        if abs(B_x-0.88) > 0.1: 
-            pitch_des = pitch_nom + np.arctan(6*(B_x-0.88)**5)
-        if abs(B_y) > 0.1:
-            roll_des = roll_nom + np.arctan(6*(B_y)**5)
+        roll_nom, pitch_nom, yaw_nom = -np.pi, 0, np.pi                
+                
+        roll_des = roll_nom + np.arctan(6*(B_y)**5)
+        pitch_des = pitch_nom - np.arctan(6*(B_x-0.88)**5)
+        yaw_des = yaw_nom
+
+        # print(f"Ball: [{B_x}, {B_y}]\nRPY current: [{roll_current}, {pitch_current}, {yaw_current}]\nRPY desired: [{roll_des}, {pitch_des}, {yaw_des}]\n")
             
         k = 1
-        dw = [k*(roll_des-roll_current), k*(pitch_des-pitch_current), 0]
-        dw = np.zeros_like(dw)
-        output.SetFromVector(np.array(dw))
+        dw = k*np.array([roll_des-roll_current, pitch_des-pitch_current, yaw_des - yaw_current])
+        # print(f"Assigned: {dw}\n\n")
+        # dw = np.zeros_like(dw)
+        output.SetFromVector(dw)
