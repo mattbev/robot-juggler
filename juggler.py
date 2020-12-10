@@ -166,8 +166,8 @@ if __name__ == "__main__":
     kp = 300
     ki = 10
     kd = 30
-    time_step = .002
-
+    # time_step = .0005
+    time_step = .001 
     juggler = Juggler(
         kp=kp, 
         ki=ki, 
@@ -193,11 +193,8 @@ if __name__ == "__main__":
     
     
     seconds = 10
-    for i in range(int(seconds*10)):
-        juggler.step(duration=0.1, final=i==seconds*10-1, verbose=True)
-
-
-
+    for i in range(int(seconds*20)):
+        juggler.step(duration=0.05, final=i==seconds*20-1, verbose=True)
 
 
     df = pd.DataFrame(juggler.log)

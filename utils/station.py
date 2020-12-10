@@ -62,7 +62,7 @@ class JugglerStation:
         parser.AddModelFromFile("utils/models/floor.sdf")
         parser.AddModelFromFile("utils/models/paddle.sdf")
         parser.AddModelFromFile("utils/models/ball.sdf")
-        plant.WeldFrames(plant.GetFrameByName("iiwa_link_7"), plant.GetFrameByName("base_link"), RigidTransform(RollPitchYaw(0, np.pi/2, 0), [0, 0, 0.25]))
+        plant.WeldFrames(plant.GetFrameByName("iiwa_link_7"), plant.GetFrameByName("base_link"), RigidTransform(RollPitchYaw(0, -np.pi/2, 0), [0, 0, 0.25]))
         plant.Finalize()
 
         num_iiwa_positions = plant.num_positions(iiwa)
@@ -83,6 +83,9 @@ class JugglerStation:
         # Make the plant for the iiwa controller to use.
         controller_plant = MultibodyPlant(time_step=time_step)
         controller_iiwa = AddIiwa(controller_plant, collision_model="with_box_collision")
+        controller_parser = Parser(controller_plant)
+        controller_parser.AddModelFromFile("utils/models/paddle.sdf")
+        controller_plant.WeldFrames(controller_plant.GetFrameByName("iiwa_link_7"), controller_plant.GetFrameByName("base_link"), RigidTransform(RollPitchYaw(0, -np.pi/2, 0), [0, 0, 0.25]))
         # AddWsg(controller_plant, controller_iiwa, welded=True)
         controller_plant.Finalize()
 

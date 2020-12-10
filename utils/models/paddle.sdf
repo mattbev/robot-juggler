@@ -6,20 +6,18 @@
     TODO: Figure out what this means/does and how to change it
     (Currently copied from foam brick sdf)       -->
       <inertial>
-        <!-- <pose>0 0 0.25 0 1.5708 0</pose> -->
-        <mass>.0001</mass>
+        <mass>0.1</mass>
         <inertia>
-          <ixx>0</ixx>
+          <ixx>0.001</ixx>
           <ixy>0</ixy>
           <ixz>0</ixz>
-          <iyy>0</iyy>
+          <iyy>0.001</iyy>
           <iyz>0</iyz>
-          <izz>0</izz>
+          <izz>0.001</izz>
         </inertia>
       </inertial>
 
       <visual name="paddle_link">
-        <!-- <pose>0 0 0.25 0 1.5708 0</pose> -->
         <pose>0 0 0 0 0 0</pose>
         <geometry>
           <cylinder>
@@ -32,8 +30,7 @@
         </material>
       </visual>
       <visual name="handle_link">
-        <pose> .19 0 0 0 1.5708 0</pose>
-        <!-- <pose>0 0 -.19 0 0 0</pose> -->
+        <pose> -.19 0 0 0 1.5708 0</pose>
         <geometry>
           <box>
             <size>.009 .075 .05</size>
@@ -60,7 +57,7 @@
             </ode>
           </friction>
           <bounce>
-              <restitution_coefficient> 0. </restitution_coefficient>
+              <restitution_coefficient> 1. </restitution_coefficient>
               <threshold>.0.</threshold>
           </bounce>
         </surface>
