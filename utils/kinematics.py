@@ -47,7 +47,6 @@ class VelocityMirror(LeafSystem):
         self.plant = plant
         self.plant_context = plant.CreateDefaultContext()
         self.iiwa = plant.GetModelInstanceByName("iiwa7")
-        # self.Ball = plant.GetBodyByName("ball")
         self.Paddle = plant.GetBodyByName("base_link")
         self.W = plant.world_frame()
 
@@ -60,26 +59,25 @@ class VelocityMirror(LeafSystem):
     def CalcOutput(self, context, output):
         q = self.GetInputPort("iiwa_pos_measured").Eval(context)
         v = self.GetInputPort("iiwa_velocity_estimated").Eval(context)
-        p_Ball = np.array(self.GetInputPort("ball_pose").Eval(context))
-        p_Ball[2] = 0
-        # p_Ball[2] = 2 * 0.75 - p_Ball[2]
+        p_Ball_xy = np.array(self.GetInputPort("ball_pose").Eval(context))[:2]
         v_Ball = np.array(self.GetInputPort("ball_velocity").Eval(context))
-        if v_Ball[2] >= 0:
-            v_Ball[2] = -1*v_Ball[2]
+        v_Ball_xy, v_Ball_z = v_Ball[:2], np.array([v_Ball[2]])
+        if v_Ball_z >= 0:
+            v_Ball_z *= -1
         else:
-            v_Ball[2] = -1*v_Ball[2]   
+            v_Ball_z *= -1   
         self.plant.SetPositionsAndVelocities(self.plant_context, self.iiwa, np.hstack([q, v]))
-        p_Paddle = np.array(self.plant.EvalBodyPoseInWorld(self.plant_context, self.Paddle).translation())
-        p_Paddle[2] = 0
-        v_Paddle = np.array(self.plant.EvalBodySpatialVelocityInWorld(self.plant_context, self.Paddle).translational())
+        p_Paddle_xy = np.array(self.plant.EvalBodyPoseInWorld(self.plant_context, self.Paddle).translation())[:2]
+        v_Paddle_xy = np.array(self.plant.EvalBodySpatialVelocityInWorld(self.plant_context, self.Paddle).translational())[:2]
         
-        K_p = 3
+        K_p = 4
         K_d = 1
-        v_P_desired = K_p*(p_Ball - p_Paddle) + K_d*(v_Ball - v_Paddle)
-        v_P_desired[2] = .9*v_Ball[2]
+        v_P_desired = K_p*(p_Ball_xy - p_Paddle_xy) + K_d*(v_Ball_xy - v_Paddle_xy)
+        v_P_desired = np.concatenate((v_P_desired, v_Ball_z))
         # Tune down with radial shape (1-x^2 - y^2)
+        scale = (1 - (p_Ball_xy[0] - .88)**2 - p_Ball_xy[1]**2)
+        v_P_desired[2] *= scale
         output.SetFromVector(v_P_desired)
-
 
 
 class AngularVelocityTilt(LeafSystem):
@@ -103,18 +101,24 @@ class AngularVelocityTilt(LeafSystem):
         X_B = self.GetInputPort("ball_pose").Eval(context)
         self.plant.SetPositions(self.plant_context, self.iiwa, q)
         R_P = RollPitchYaw(self.plant.EvalBodyPoseInWorld(self.plant_context, self.P).rotation()).vector()
-        # R_WP = self.plant.EvalBodyPoseInWorld(self.plant_context, self.P).rotation()
         roll_current, pitch_current, yaw_current = R_P[0], R_P[1], R_P[2]
-        # print(roll_current, pitch_current, R_P[2])
-        B_x, B_y = X_B[0], X_B[1]
-
-        roll_des = np.arctan(3*(B_y)**3)
-        pitch_des = -np.arctan(3*(B_x-0.88)**3)
+        # B_x, B_y = X_B[0], X_B[1]
+        
+        k = np.array([1, 4])
+        centerpoint = np.array([0.9, 0])
+        # roll_des = np.sign(B_y) * np.arctan(k * (1 - np.cos(B_y)))
+        # pitch_des = np.sign(B_x - centerpoint) * np.arctan(k * (1 - np.cos(B_x - centerpoint_x)))
+        deltas = np.sign(X_B[:2]) * np.arctan(k * (1 - np.cos(X_B[:2] - centerpoint)))
+        pitch_des = deltas[0]
+        roll_des = deltas[1]
+        # yaw_des = np.arctan(centerpoint[1]/centerpoint[0])
+        # roll_des = np.arctan(.75*(B_y)**3)
+        # pitch_des = -np.arctan(.75*(B_x-0.88)**3)
         yaw_des = 0
 
         # print(f"Ball: [{B_x}, {B_y}, {X_B[2]}]\nRPY current: [{roll_current}, {pitch_current}, {yaw_current}]\nRPY desired: [{roll_des}, {pitch_des}, {yaw_des}]")
             
-        K_p = 1
+        K_p = 4
 
         dw = K_p*np.array([roll_des-roll_current, pitch_des-pitch_current, yaw_des - yaw_current])
         # print(f"Commanded: {dw}\n")

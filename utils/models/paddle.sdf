@@ -8,12 +8,12 @@
       <inertial>
         <mass>0.1</mass>
         <inertia>
-          <ixx>0.001</ixx>
+          <ixx>0.0007664583333333</ixx> <!-- (1/12)m(3r^2 + h^2) -->
           <ixy>0</ixy>
           <ixz>0</ixz>
-          <iyy>0.001</iyy>
+          <iyy>0.0007664583333333</iyy> <!-- (1/12)m(3r^2 + h^2) -->
           <iyz>0</iyz>
-          <izz>0.001</izz>
+          <izz>0.00153125</izz> <!-- (1/2)mr^2 -->
         </inertia>
       </inertial>
 

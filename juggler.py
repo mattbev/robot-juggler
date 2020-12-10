@@ -19,7 +19,7 @@ from utils.kinematics import InverseKinematics, VelocityMirror, AngularVelocityT
 
 
 class Juggler:
-    def __init__(self, kp=100, ki=1, kd=20, time_step=0.002, show_axis=False):
+    def __init__(self, kp=100, ki=1, kd=20, time_step=0.001, show_axis=False):
         """
         Robotic Kuka IIWA juggler with paddle end effector     
 
@@ -27,7 +27,7 @@ class Juggler:
             kp (int, optional): proportional gain. Defaults to 100.
             ki (int, optional): integral gain. Defaults to 1.
             kd (int, optional): derivative gain. Defaults to 20.
-            time_step (float, optional): time step for internal manipulation station controller. Defaults to 0.002.
+            time_step (float, optional): time step for internal manipulation station controller. Defaults to 0.001.
             show_axis (boolean, optional): whether or not to show the axis of reflection.
         """        
         self.time = 0
@@ -40,7 +40,8 @@ class Juggler:
 
         self.builder = DiagramBuilder()
         self.station = self.builder.AddSystem(juggler_station.get_diagram())
-        self.log = []
+        self.position_log = []
+        self.velocity_log = []
 
         self.visualizer = ConnectMeshcatVisualizer(
             self.builder, output_port=self.station.GetOutputPort("geometry_query"), zmq_url=zmq_url)
@@ -81,7 +82,6 @@ class Juggler:
         self.station_context = self.station.GetMyContextFromRoot(self.context)
         self.plant_context = self.plant.GetMyContextFromRoot(self.context)
 
-        # self.plant.SetPositions(self.plant_context, self.plant.GetModelInstanceByName("iiwa7"), [0, np.pi/4, 0, -np.pi/2, 0, -np.pi/4, 0])
         self.plant.SetPositions(self.plant_context, self.plant.GetModelInstanceByName("iiwa7"), [0, np.pi/3, 0, -np.pi/2, 0, -np.pi/3, 0])
         self.station.GetInputPort("iiwa_feedforward_torque").FixValue(self.station_context, np.zeros((7,1)))
         iiwa_model_instance = self.plant.GetModelInstanceByName("iiwa7")
@@ -89,39 +89,8 @@ class Juggler:
         integrator.GetMyContextFromRoot(self.context).get_mutable_continuous_state_vector().SetFromVector(iiwa_q)
         
 
-    def command_iiwa_position(self, iiwa_position, simulate=True, duration=0.1, final=True, verbose=False):
-        """
-        Command the arm to move to a specific configuration
 
-        Args:
-            iiwa_position (list): the (length 7 for 7 DoF) list indicating arm joint positions
-            simulate (bool, optional): whether or not to visualize the command. Defaults to True.
-            duration (float, optional): duration to complete command in simulation. Defaults to 0.1.
-            final (bool, optional): whether or not this is the final command in the sequence; relevant for recording. Defaults to True.
-            verbose (bool, optional): whether or not to print measured position change. Defaults to False.
-        """        
-        self.station.GetInputPort("iiwa_position").FixValue(
-            self.station_context, iiwa_position)
-        
-        self.diagram.GetInputPort("paddle_desired_velocity").FixValue(self.context, [0,0,0,0,0,0])
-        
-        if simulate:
-            self.visualizer.start_recording()
-            self.simulator.AdvanceTo(self.time + duration)
-            self.visualizer.stop_recording()
-            
-            self.log.append(self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context))
-            
-            if verbose:
-                print("Commanding position: {}\nMeasured Position: {}\n\n".format(iiwa_position, np.around(self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context), 3)))
-            
-            if final:
-                self.visualizer.publish_recording()
-
-        self.time += duration
-
-
-    def step(self, simulate=True, duration=0.1, final=True, verbose=False):
+    def step(self, simulate=True, duration=0.1, final=True, verbose=False, display_pose=False):
         """
         step the closed loop system
 
@@ -130,6 +99,7 @@ class Juggler:
             duration (float, optional): duration to complete command in simulation. Defaults to 0.1.
             final (bool, optional): whether or not this is the final command in the sequence; relevant for recording. Defaults to True.
             verbose (bool, optional): whether or not to print measured position change. Defaults to False.
+            display_pose (bool, optional): whether or not to show the pose of the paddle in simulation. Defaults to False.
         """        
         ball_pose = self.plant.EvalBodyPoseInWorld(self.plant_context, self.plant.GetBodyByName("ball")).translation()
         ball_velocity = self.plant.EvalBodySpatialVelocityInWorld(self.plant_context, self.plant.GetBodyByName("ball")).translational()
@@ -137,19 +107,18 @@ class Juggler:
         self.diagram.GetInputPort("v_ball_pose").FixValue(self.context, ball_pose)
         self.diagram.GetInputPort("ball_velocity").FixValue(self.context, ball_velocity) 
 
-        
-        # transform = self.plant.EvalBodyPoseInWorld(self.plant_context, self.plant.GetBodyByName("base_link")).GetAsMatrix4()
-        # AddTriad(self.visualizer.vis, name=f"paddle_{round(self.time, 1)}", prefix='', length=0.15, radius=.006)
-        # self.visualizer.vis[''][f"paddle_{round(self.time, 1)}"].set_transform(transform)
+        if display_pose:
+            transform = self.plant.EvalBodyPoseInWorld(self.plant_context, self.plant.GetBodyByName("base_link")).GetAsMatrix4()
+            AddTriad(self.visualizer.vis, name=f"paddle_{round(self.time, 1)}", prefix='', length=0.15, radius=.006)
+            self.visualizer.vis[''][f"paddle_{round(self.time, 1)}"].set_transform(transform)
 
         if simulate:
             self.visualizer.start_recording()
             self.simulator.AdvanceTo(self.time + duration)
             self.visualizer.stop_recording()
             
-            self.log.append(self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context))
-            # print("Command: ", np.around(self.station.GetOutputPort("iiwa_position_command").Eval(self.station_context), 3))
-            # print("Measure: ", np.around(self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context), 3), "\n")
+            self.position_log.append(self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context))
+            self.velocity_log.append(self.station.GetOutputPort("iiwa_velocity_estimated").Eval(self.station_context))
 
             if verbose:
                 print("Time: {}\nMeasured Position: {}\n\n".format(round(self.time, 3), np.around(self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context), 3)))
@@ -175,32 +144,13 @@ if __name__ == "__main__":
         time_step=time_step,
         show_axis=False)
 
-    # positions = [[r, np.pi/4, 0, -np.pi/2, 0, -np.pi/4, 0 ] for r in np.linspace(0, np.pi, 40)]
-    # for i, pos in enumerate(positions):
-        # juggler.command_iiwa_position(pos, duration=0.1, final=i==len(positions)-1, verbose=False)
-        # juggler.t(desired=[0, 0, 0, 0, 0, 0.1],duration=0.1, final=i==len(positions)-1, verbose=False)
     
-    # velocities = [[0, 0, 0, .2*np.cos(t), .2*np.sin(t/1.5), 0] for t in np.linspace(0, 10, 50)]
-    # velocities = [
-    #     [0, 0, 0, 0, 0, 3], 
-    #     [0, 0, 0, 0, 0, 0],
-    #     [0, 0, 0, 0, 0, -1],
-    #     [0, 0, 0, 0, 0, 0]
-    # ] * 2
-    # durations = [.15, .1, .15, .1]*2
-    # for i, vel in enumerate(velocities):
-    #     juggler.t(vel, duration=durations[i], final=i==len(velocities)-1, verbose=True)
-    
-    
-    seconds = 10
+    seconds = 5
     for i in range(int(seconds*20)):
         juggler.step(duration=0.05, final=i==seconds*20-1, verbose=True)
 
 
-    df = pd.DataFrame(juggler.log)
-    print(df)
+    p_df = pd.DataFrame(juggler.position_log)
+    v_df = pd.DataFrame(juggler.velocity_log)
+    print(f"Positions:\n{p_df}\n\nVelocities:\n{v_df}\n")
     input("\npress enter key to exit...")
-    # x = np.linspace(0, np.pi, 40)
-    # for i in range(7):
-    #     plt.plot(x, df[i], label=i)
-    # plt.show()

@@ -57,8 +57,8 @@ class JugglerStation:
         iiwa = AddIiwa(plant, collision_model="with_box_collision")
         # wsg = AddWsg(plant, iiwa)
         parser = Parser(plant)
-        parser.AddModelFromFile(
-            FindResource("models/camera_box.sdf"), "camera0")
+        # parser.AddModelFromFile(
+        #     FindResource("models/camera_box.sdf"), "camera0")
         parser.AddModelFromFile("utils/models/floor.sdf")
         parser.AddModelFromFile("utils/models/paddle.sdf")
         parser.AddModelFromFile("utils/models/ball.sdf")
@@ -139,8 +139,8 @@ class JugglerStation:
         # builder.ExportOutput(wsg_mbp_state_to_wsg_state.get_output_port(), "wsg_state_measured")
         # builder.ExportOutput(wsg_controller.get_grip_force_output_port(), "wsg_force_measured")
 
-        # Cameras.
-        AddRgbdSensors(builder, plant, scene_graph)
+        # # Cameras.
+        # AddRgbdSensors(builder, plant, scene_graph)
 
         # Export "cheat" ports.
         builder.ExportOutput(scene_graph.get_query_output_port(), "geometry_query")

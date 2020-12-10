@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <sdf version="1.7">
   <model name="ball">
-    <pose>0.88 .15 1 0 0 0</pose>
+    <pose>1.05 0 1 0 0 0</pose>
     <link name="ball">
       <inertial>
-        <mass>.0001</mass>
+        <mass>.005</mass>
       </inertial>
       <visual name="ball">
         <geometry>
@@ -24,7 +24,7 @@
         </geometry>
         <surface>
             <bounce>
-                <restitution_coefficient> 1.0 </restitution_coefficient>
+                <restitution_coefficient> .5 </restitution_coefficient>
                 <threshold>0.</threshold>
             </bounce>
             <friction>
