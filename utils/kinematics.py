@@ -62,6 +62,12 @@ class VelocityMirror(LeafSystem):
         p_Ball_xy = np.array(self.GetInputPort("ball_pose").Eval(context))[:2]
         v_Ball = np.array(self.GetInputPort("ball_velocity").Eval(context))
         v_Ball_xy, v_Ball_z = v_Ball[:2], np.array([v_Ball[2]])
+
+        # Prevent from going crazy when lost ball
+        if np.linalg.norm(p_Ball_xy) > 2:
+            output.SetFromVector([0, 0, 0])
+            return
+
         if v_Ball_z >= 0:
             v_Ball_z *= -1
         else:
@@ -103,6 +109,11 @@ class AngularVelocityTilt(LeafSystem):
         R_P = RollPitchYaw(self.plant.EvalBodyPoseInWorld(self.plant_context, self.P).rotation()).vector()
         roll_current, pitch_current, yaw_current = R_P[0], R_P[1], R_P[2]
         # B_x, B_y = X_B[0], X_B[1]
+
+        # Prevent from going crazy when lost ball
+        if np.linalg.norm(X_B[:2]) > 2:
+            output.SetFromVector([0, 0, 0])
+            return
         
         k = np.array([1, 4])
         centerpoint = np.array([0.9, 0])
