@@ -155,7 +155,7 @@ if __name__ == "__main__":
         show_axis=False)
 
     
-    seconds = 20
+    seconds = 10
     for i in range(int(seconds*20)):
         t = juggler.step(duration=0.05, final=i==seconds*20-1, verbose=True)
         if t is not None and t != seconds:

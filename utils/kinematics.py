@@ -134,7 +134,7 @@ class AngularVelocityTilt(LeafSystem):
             output.SetFromVector([0, 0, 0])
             return
         
-        k = np.array([.75, .75])
+        k = np.array([.5, .5])
         # roll_des = np.sign(B_y) * np.arctan(k * (1 - np.cos(B_y)))
         # pitch_des = np.sign(B_x - centerpoint) * np.arctan(k * (1 - np.cos(B_x - centerpoint_x)))
         sign_multiplier = np.array([1, 1])
