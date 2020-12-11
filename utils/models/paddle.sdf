@@ -2,9 +2,6 @@
 <sdf version="1.7">
   <model name="paddle">
     <link name="base_link">
-    <!--
-    TODO: Figure out what this means/does and how to change it
-    (Currently copied from foam brick sdf)       -->
       <inertial>
         <mass>0.1</mass>
         <inertia>

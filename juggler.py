@@ -67,8 +67,9 @@ class Juggler:
         self.builder.Connect(v_mirror.get_output_port(), ik_sys.GetInputPort("paddle_desired_velocity"))
 
         self.builder.ExportInput(v_mirror.GetInputPort("ball_pose"), "v_ball_pose")
-        self.builder.ExportInput(v_mirror.GetInputPort("ball_velocity"), "ball_velocity")
+        self.builder.ExportInput(v_mirror.GetInputPort("ball_velocity"), "v_ball_velocity")
         self.builder.ExportInput(w_tilt.GetInputPort("ball_pose"), "w_ball_pose")
+        self.builder.ExportInput(w_tilt.GetInputPort("ball_velocity"), "w_ball_velocity")
         # Useful for debugging
         # desired_vel = self.builder.AddSystem(ConstantVectorSource([0, 0, 0]))
         # self.builder.Connect(desired_vel.get_output_port(), ik_sys.GetInputPort("paddle_desired_angular_velocity"))
@@ -103,9 +104,11 @@ class Juggler:
         """        
         ball_pose = self.plant.EvalBodyPoseInWorld(self.plant_context, self.plant.GetBodyByName("ball")).translation()
         ball_velocity = self.plant.EvalBodySpatialVelocityInWorld(self.plant_context, self.plant.GetBodyByName("ball")).translational()
-        self.diagram.GetInputPort("w_ball_pose").FixValue(self.context, ball_pose)
         self.diagram.GetInputPort("v_ball_pose").FixValue(self.context, ball_pose)
-        self.diagram.GetInputPort("ball_velocity").FixValue(self.context, ball_velocity) 
+        self.diagram.GetInputPort("v_ball_velocity").FixValue(self.context, ball_velocity)
+        self.diagram.GetInputPort("w_ball_pose").FixValue(self.context, ball_pose)
+        self.diagram.GetInputPort("w_ball_velocity").FixValue(self.context, ball_velocity)
+ 
 
         if display_pose:
             transform = self.plant.EvalBodyPoseInWorld(self.plant_context, self.plant.GetBodyByName("base_link")).GetAsMatrix4()
@@ -113,20 +116,27 @@ class Juggler:
             self.visualizer.vis[''][f"paddle_{round(self.time, 1)}"].set_transform(transform)
 
         if simulate:
+
             self.visualizer.start_recording()
             self.simulator.AdvanceTo(self.time + duration)
             self.visualizer.stop_recording()
             
             self.position_log.append(self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context))
             self.velocity_log.append(self.station.GetOutputPort("iiwa_velocity_estimated").Eval(self.station_context))
-
+            
             if verbose:
                 print("Time: {}\nMeasured Position: {}\n\n".format(round(self.time, 3), np.around(self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context), 3)))
             
+            if len(self.position_log) >= 2 and np.equal(self.position_log[-1], self.position_log[-2]).all():
+                print("something went wrong, simulation terminated")
+                final = True
+
             if final:
                 self.visualizer.publish_recording()
+                return 
 
         self.time += duration
+
 
 
 
@@ -145,7 +155,7 @@ if __name__ == "__main__":
         show_axis=False)
 
     
-    seconds = 5
+    seconds = 30
     for i in range(int(seconds*20)):
         juggler.step(duration=0.05, final=i==seconds*20-1, verbose=True)
 

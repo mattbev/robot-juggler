@@ -62,6 +62,7 @@ class JugglerStation:
         parser.AddModelFromFile("utils/models/floor.sdf")
         parser.AddModelFromFile("utils/models/paddle.sdf")
         parser.AddModelFromFile("utils/models/ball.sdf")
+        parser.AddModelFromFile("utils/models/reflection_axis.sdf")
         plant.WeldFrames(plant.GetFrameByName("iiwa_link_7"), plant.GetFrameByName("base_link"), RigidTransform(RollPitchYaw(0, -np.pi/2, 0), [0, 0, 0.25]))
         plant.Finalize()
 
