@@ -1,6 +1,11 @@
 # robot-juggler
 Robotic juggling in pydrake. 
 
+## Usage
+```
+python3 juggler.py
+```
+
 ## Dependencies
 ### Drake dependencies
 1. [Install Drake for python](https://drake.mit.edu/python_bindings.html)
