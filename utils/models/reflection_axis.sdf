@@ -1,17 +1,17 @@
 <?xml version="1.0"?>
 <sdf version="1.7">
   <model name="axis">
-    <pose>.88 0 .5 0 0 0</pose>
+    <pose>.88 0 2.5 0 0 0</pose>
     <link name="axis">
       <visual name="axis">
         <geometry>
           <cylinder>
             <radius>0.01</radius>
-            <length>1</length>
+            <length>5</length>
           </cylinder>
         </geometry>
         <material>
-          <diffuse>.4 0.4 0.4 .25</diffuse>
+          <diffuse>.4 0.4 0.4 .3</diffuse>
         </material>
       </visual>
     </link>

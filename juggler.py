@@ -127,13 +127,13 @@ class Juggler:
             if verbose:
                 print("Time: {}\nMeasured Position: {}\n\n".format(round(self.time, 3), np.around(self.station.GetOutputPort("iiwa_position_measured").Eval(self.station_context), 3)))
             
-            if len(self.position_log) >= 2 and np.equal(self.position_log[-1], self.position_log[-2]).all():
+            if len(self.position_log) >= 2 and np.equal(np.around(self.position_log[-1], 3), np.around(self.position_log[-2], 3)).all():
                 print("something went wrong, simulation terminated")
                 final = True
 
             if final:
                 self.visualizer.publish_recording()
-                return 
+                return self.time + duration
 
         self.time += duration
 
@@ -145,8 +145,8 @@ if __name__ == "__main__":
     kp = 300
     ki = 10
     kd = 30
-    # time_step = .0005
-    time_step = .001 
+    time_step = .0005
+    # time_step = .001 
     juggler = Juggler(
         kp=kp, 
         ki=ki, 
@@ -155,9 +155,11 @@ if __name__ == "__main__":
         show_axis=False)
 
     
-    seconds = 30
+    seconds = 20
     for i in range(int(seconds*20)):
-        juggler.step(duration=0.05, final=i==seconds*20-1, verbose=True)
+        t = juggler.step(duration=0.05, final=i==seconds*20-1, verbose=True)
+        if t is not None and t != seconds:
+            break
 
 
     p_df = pd.DataFrame(juggler.position_log)

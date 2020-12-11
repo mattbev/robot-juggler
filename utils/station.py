@@ -55,10 +55,7 @@ class JugglerStation:
         plant, scene_graph = AddMultibodyPlantSceneGraph(
             builder, time_step=time_step)
         iiwa = AddIiwa(plant, collision_model="with_box_collision")
-        # wsg = AddWsg(plant, iiwa)
         parser = Parser(plant)
-        # parser.AddModelFromFile(
-        #     FindResource("models/camera_box.sdf"), "camera0")
         parser.AddModelFromFile("utils/models/floor.sdf")
         parser.AddModelFromFile("utils/models/paddle.sdf")
         parser.AddModelFromFile("utils/models/ball.sdf")
@@ -125,23 +122,6 @@ class JugglerStation:
         # Export commanded torques.
         #builder.ExportOutput(adder.get_output_port(), "iiwa_torque_commanded")
         #builder.ExportOutput(adder.get_output_port(), "iiwa_torque_measured")
-
-        # Wsg controller.
-        # wsg_controller = builder.AddSystem(SchunkWsgPositionController())
-        # wsg_controller.set_name("wsg_controller")
-        # builder.Connect(wsg_controller.get_generalized_force_output_port(),             
-        #                 plant.get_actuation_input_port(wsg))
-        # builder.Connect(plant.get_state_output_port(wsg), wsg_controller.get_state_input_port())
-        # builder.ExportInput(wsg_controller.get_desired_position_input_port(), "wsg_position")
-        # builder.ExportInput(wsg_controller.get_force_limit_input_port(), "wsg_force_limit")
-        # wsg_mbp_state_to_wsg_state = builder.AddSystem(
-        #     MakeMultibodyStateToWsgStateSystem())
-        # builder.Connect(plant.get_state_output_port(wsg), wsg_mbp_state_to_wsg_state.get_input_port())
-        # builder.ExportOutput(wsg_mbp_state_to_wsg_state.get_output_port(), "wsg_state_measured")
-        # builder.ExportOutput(wsg_controller.get_grip_force_output_port(), "wsg_force_measured")
-
-        # # Cameras.
-        # AddRgbdSensors(builder, plant, scene_graph)
 
         # Export "cheat" ports.
         builder.ExportOutput(scene_graph.get_query_output_port(), "geometry_query")

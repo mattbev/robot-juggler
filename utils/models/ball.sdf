@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <sdf version="1.7">
   <model name="ball">
-    <pose>1.05 0 1 0 0 0</pose>
+    <pose>1.05 .15 1 0 0 0</pose>
     <link name="ball">
       <inertial>
         <mass>.005</mass>
