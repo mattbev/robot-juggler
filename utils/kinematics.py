@@ -137,9 +137,11 @@ class AngularVelocityTilt(LeafSystem):
         # pitch_des = np.sign(B_x - centerpoint) * np.arctan(k * (1 - np.cos(B_x - centerpoint_x)))
         sign_multiplier = np.array([1, 1])
         if np.sign(p_Ball_xy[0] - CENTERPOINT[0]) != np.sign(v_Ball_xy[0]):
-            sign_multiplier[0] = .01
+            # sign_multiplier[0] = .05
+            sign_multiplier[0] = 0.25 / (10 * v_Ball_xy[0] + 1) 
         if np.sign(p_Ball_xy[1]) != np.sign(v_Ball_xy[1]):
-            sign_multiplier[1] = .01
+            # sign_multiplier[1] = .05
+            sign_multiplier[1] = 0.25 / (10 * v_Ball_xy[1] + 1)
         
         deltas = sign_multiplier * np.sign(p_Ball_xy[:2] - CENTERPOINT) * np.arctan(k * (1 - np.cos(p_Ball_xy[:2] - CENTERPOINT)))
         pitch_des = -deltas[0]
