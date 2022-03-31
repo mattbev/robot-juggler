@@ -1,6 +1,10 @@
 # robot-juggler
 Robotic juggling in pydrake. 
 
+Authors: [@mattbev](https://github.com/matbev)\*, [@rshube](https://github.com/rshube)\*
+
+\*equal contribution
+
 ## Usage
 ```
 python3 juggler.py
